@@ -1,4 +1,4 @@
- /* 
+ /*
  * \file lstring.cpp
  */
 
@@ -66,6 +66,30 @@ namespace logog {
 		Initialize();
 		assign( pstr );
 	}
+
+#if LOGOG_USE_TR1
+	String::String( String && other )
+	{
+		Initialize();
+		swap( std::move( other ) );
+	}
+
+	String & String::operator=( String && other )
+	{
+		swap( std::move( other ) );
+		return *this;
+	}
+
+	void String::swap( String && other )
+	{
+		using std::swap;
+		swap( m_pBuffer,      other.m_pBuffer );
+		swap( m_pOffset,      other.m_pOffset );
+		swap( m_pEndOfBuffer, other.m_pEndOfBuffer );
+		swap( m_pKMP,         other.m_pKMP );
+		swap( m_bIsConst,     other.m_bIsConst );
+	}
+#endif // LOGOG_USE_TR1
 
 	size_t String::size() const
 	{
@@ -317,12 +341,12 @@ namespace logog {
 			return;
 		}
 
-		/** nAttemptedSize is now a guess at an appropriate size, which is about 
+		/** nAttemptedSize is now a guess at an appropriate size, which is about
 		 ** two times the number of LOGOG_CHARs in the incoming format string.
 		 **/
 		nAttemptedSize = nEstLength * 2 * sizeof( LOGOG_CHAR );
 
-		/* Some *printf implementations, such as msvc's, return -1 on failure.  
+		/* Some *printf implementations, such as msvc's, return -1 on failure.
 		 * Others, such as gcc, return the number
 		 * of characters actually formatted on failure.  Deal with either case here.
 		 */
@@ -393,7 +417,7 @@ namespace logog {
 			 ** be 1, 2, or 4 bytes long.  So nAttemptedSize must be greater or equal to nActualSize
 			 ** less the size of one (null) LOGOG_CHAR in bytes.  Also, the last
 			 ** allocation may have failed altogether.
-			 ** 
+			 **
 			 **/
 			if (( nAttemptedSize >= (nActualSize - (int)sizeof(LOGOG_CHAR))) && ( nActualSize != -1))
 				break;
@@ -421,7 +445,7 @@ namespace logog {
 		assign( pszFormatted );
 		/* We just allocated this string, which means it needs to be deallocated
 		 * at shutdown time.  The previous function may have changed the const
-		 * setting for this string, which means we may need to change it back here... 
+		 * setting for this string, which means we may need to change it back here...
 		 * */
 		m_bIsConst = false;
 	}
@@ -494,4 +518,3 @@ namespace logog {
 		return npos;
 	}
 }
-

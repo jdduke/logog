@@ -14,7 +14,7 @@
 typedef wchar_t LOGOG_CHAR;
 /** This is a naughty little hack.  If we're using Unicode, then we append an
  * L to your const string.  However, we have several situations in which that string will actually be a NULL or 0
- * value in code, and the string will be rendered as L0 or LNULL.  In that case, we catch it with yet another 
+ * value in code, and the string will be rendered as L0 or LNULL.  In that case, we catch it with yet another
  * macro.  Hacky, but seems to do the trick.  Beware of conflicts with existing code though...!
  */
 #define L0 (const LOGOG_CHAR *)'\0'
@@ -44,14 +44,14 @@ typedef char LOGOG_CHAR;
   * string.
   */
 #ifndef LOGOG_USE_PREFIX
-/** The _LG() macro is defined only if LOGOG_USE_PREFIX is not defined.  _LG() can be used to describe 
+/** The _LG() macro is defined only if LOGOG_USE_PREFIX is not defined.  _LG() can be used to describe
  ** a const string that is compiled to either as Unicode
  * or ANSI, based on the setting of the LOGOG_UNICODE flag.
- * _LG() is not needed if you don't need Unicode support.  If you want your messages to work with both Unicode 
+ * _LG() is not needed if you don't need Unicode support.  If you want your messages to work with both Unicode
  * as well as ANSI builds of logog, preface them like this: _LG("This const string works on Unicode as well as ANSI.")
  */
 #define _LG( x ) LOGOG_CONST_STRING( x )
-#endif 
+#endif
 
 namespace logog
 {
@@ -70,6 +70,10 @@ namespace logog
 		String( const LOGOG_CHAR *pstr );
 		String & operator =( const String & other);
 		String & operator =( const LOGOG_CHAR *pstr );
+#if LOGOG_USE_TR1
+		String( String && other );
+        String & operator =( String && other);
+#endif // LOGOG_USE_TR1
 		size_t size() const;
 		virtual void clear();
 		virtual size_t reserve( size_t nSize );
@@ -92,6 +96,10 @@ namespace logog
 
 	protected:
 		virtual void Initialize();
+
+#if LOGOG_USE_TR1
+		void swap( String && other );
+#endif // LOGOG_USE_TR1
 
 		/* Code modified from http://www-igm.univ-mlv.fr/~lecroq/string/node8.html#SECTION0080 */
 		void preKmp(size_t m);

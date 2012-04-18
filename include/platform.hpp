@@ -18,12 +18,9 @@
 /* The user hasn't told us which flavor we're running on, so we must make a guess as to which platform is valid. */
 
 /* If this is MSVC, then it's Windows like */
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
 #define LOGOG_FLAVOR_WINDOWS 1
-#endif // _MSC_VER
-
-/* gcc probably means Posix */
-#ifdef __GNUC__
+#elif defined(__GNUC__)
 #define LOGOG_FLAVOR_POSIX 1
 #endif
 
@@ -39,6 +36,10 @@
 extern int vsnprintf(char *str, size_t size, const char *format, va_list ap);
 #define LOGOG_USE_TR1 1
 #endif // __CYGWIN__
+
+#ifdef __MINGW32__
+#define LOGOG_USE_TR1 1
+#endif
 
 #ifdef __linux__
 #define LOGOG_USE_TR1 1

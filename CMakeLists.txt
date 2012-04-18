@@ -18,11 +18,11 @@ if(MSVC)
   endif()
 elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   # Update if necessary
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-variadic-macros -Wall -Wno-long-long")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++0x -Wno-variadic-macros -Wall -Wno-long-long")
 endif()
 include_directories( include )
 add_library( logog
-	src/api.cpp 
+	src/api.cpp
 	src/checkpoint.cpp
 	src/formatter.cpp
 	src/lobject.cpp

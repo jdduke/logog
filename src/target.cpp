@@ -1,4 +1,4 @@
- /* 
+ /*
  * \file target.cpp
  */
 
@@ -6,7 +6,120 @@
 
 #include <iostream>
 
+#ifdef LOGOG_FLAVOR_POSIX
+#include <unistd.h>
+#endif
+
 namespace logog {
+
+	namespace color {
+	enum LogogColor 
+{
+		COLOR_DEFAULT,
+		COLOR_RED,
+		COLOR_GREEN,
+		COLOR_YELLOW
+	};
+
+#ifdef LOGOG_FLAVOR_WINDOWS
+	// Returns the character attribute for the given color.
+	WORD GetColorAttribute(LogogColor color) 
+	{
+		switch (color) {
+			case COLOR_RED:    return FOREGROUND_RED;
+			case COLOR_GREEN:  return FOREGROUND_GREEN;
+			case COLOR_YELLOW: return FOREGROUND_RED | FOREGROUND_GREEN;
+			default:           return 0;
+		}
+	}
+#else
+	// Returns the ANSI color code for the given color.  COLOR_DEFAULT is
+	// an invalid input.
+	const char* GetAnsiColorCode(LogogColor color) 
+	{
+		switch (color) {
+			case COLOR_RED:     return "1";
+			case COLOR_GREEN:   return "2";
+			case COLOR_YELLOW:  return "3";
+			default:            return NULL;
+		};
+	}
+#endif  // LOGOG_FLAVOR_WINDOWS
+
+	bool ShouldUseColor(bool stdout_is_tty) 
+	{
+#ifdef LOGOG_FLAVOR_WINDOWS
+		// On Windows the TERM variable is usually not set, but the
+		// console there does support colors.
+		return stdout_is_tty;
+#else
+		// On non-Windows platforms, we rely on the TERM variable.
+#if defined(TODO_COLOR_SUPPORT)
+		const char* const term = posix::GetEnv("TERM");
+		const bool term_supports_color =
+			String::CStringEquals(term, "xterm") ||
+			String::CStringEquals(term, "xterm-color") ||
+			String::CStringEquals(term, "xterm-256color") ||
+			String::CStringEquals(term, "screen") ||
+			String::CStringEquals(term, "linux") ||
+			String::CStringEquals(term, "cygwin");
+		return stdout_is_tty && term_supports_color;
+#endif
+		return stdout_is_tty;
+#endif  // LOGOG_FLAVOR_WINDOWS
+	}
+
+	// Helpers for printing colored strings to stdout. Note that on Windows, we
+	// cannot simply emit special characters and have the terminal change colors.
+	// This routine must actually emit the characters rather than return a string
+	// that would be colored when printed, as can be done on Linux.
+	void ColoredPrintf(LogogColor color, const char* fmt, ...) 
+	{
+		va_list args;
+		va_start(args, fmt);
+
+#if !defined(LOGOG_FLAVOR_WINDOWS) && !defined(LOGOG_FLAVOR_POSIX)
+		const bool use_color = false;
+#else
+		static const bool in_color_mode =
+			ShouldUseColor(true);//isatty(fileno(stdout)) != 0);
+		const bool use_color = in_color_mode && (color != COLOR_DEFAULT);
+#endif  // !LOGOG_FLAVOR_POSIX && !LOGOG_FLAVOR_WINDOWS
+		// The '!= 0' comparison is necessary to satisfy MSVC 7.1.
+
+		if (!use_color) {
+			vprintf(fmt, args);
+			va_end(args);
+			return;
+		}
+
+#ifdef LOGOG_FLAVOR_WINDOWS
+		const HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+		// Gets the current text color.
+		CONSOLE_SCREEN_BUFFER_INFO buffer_info;
+		GetConsoleScreenBufferInfo(stdout_handle, &buffer_info);
+		const WORD old_color_attrs = buffer_info.wAttributes;
+
+		// We need to flush the stream buffers into the console before each
+		// SetConsoleTextAttribute call lest it affect the text that is already
+		// printed but has not yet reached the console.
+		fflush(stdout);
+		SetConsoleTextAttribute(stdout_handle,
+								GetColorAttribute(color) | FOREGROUND_INTENSITY);
+		vprintf(fmt, args);
+
+		fflush(stdout);
+		// Restores the text color.
+		SetConsoleTextAttribute(stdout_handle, old_color_attrs);
+#else
+		printf("\033[0;3%sm", GetAnsiColorCode(color));
+		vprintf(fmt, args);
+		printf("\033[m");  // Resets the terminal to default.
+#endif  // LOGOG_FLAVOR_WINDOWS
+		va_end(args);
+	}
+	}
 
 	Target::Target() :
 		m_bNullTerminatesStrings( true )
@@ -60,7 +173,8 @@ namespace logog {
 //! [Cout]
 	int Cout::Output( const LOGOG_STRING &data )
 	{
-		LOGOG_COUT << (const LOGOG_CHAR *)data;
+		color::ColoredPrintf(color::COLOR_GREEN, (const LOGOG_CHAR *)data);
+		//LOGOG_COUT << (const LOGOG_CHAR *)data;
 
 		return 0;
 	}
@@ -339,4 +453,3 @@ namespace logog {
 		m_nSize = 0;
 	}
 }
-
